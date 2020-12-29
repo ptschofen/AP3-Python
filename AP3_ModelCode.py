@@ -332,7 +332,7 @@ def baselineRun():
 baselineRun()
 
 def mdLoops():
-    return 42
+    return 421
 # print(PM25b)
 
 print( f'Total deaths across the United States in {year}: {deaths:.0f}')
