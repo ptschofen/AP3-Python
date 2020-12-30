@@ -238,6 +238,8 @@ def baselineRun():
     global PM25p
     global SO2
     global VOC
+
+    # add up species after transport through s/r matrices
     NH3 = nh3Conv * nh4Cal * (np.dot(areaSourceEmissions[:, 0], areaSRNH3) + 
                               np.dot(lowStackEmissions[:, 0], lowSRNH3) + 
                               np.dot(medStackEmissions[:, 0], medSRNH3) + 
@@ -269,29 +271,37 @@ def baselineRun():
                                 np.dot(tallStackEmissions[:, 5], tallSRPMVOC) + 
                                 np.dot(tall2StackEmissions[:, 5],tall2SRPMVOC))
 
-    global NH4
     global NH4e
     global HNO3
     global NO3
     global SO4
 
-    NH4 = NH3
+    # zero out negative free ammonia
     NH4e = (NH3 / 18 - 1.5 * SO2 / 96)
     NH4e = NH4e.clip(10**-12)
 
+    # compute nitric acid
     HNO3 = NOx/62
-
+    
+    # nitrate formation according to regression in Charles (__YEAR__)
+    # which includes an interaction term btw nitric acid and ammonia 
     NO3 = 0.6509*(0.33873*HNO3+0.121008*NH4e+ 3.511482*(HNO3*NH4e))*62
+
+    # compute sulfate
     SO4 = 1.375 * SO2
 
     # compute baseline PM25 concentrations
     global PM25b
-    PM25b = NO3 + SO4 + VOC + PM25p + NH4
 
+    # add up all components for baseline PM2.5 concentrations
+    PM25b = NH3 + NO3 + SO4 + VOC + PM25p
+
+    global adultImpact
     adultMort = mortality[:, 7:18]
     adultImpact = 1-(1/(np.exp(drAdult*PM25b)))
     adultExposure = population[:, 7:18]
     
+    global infantImpact
     infantMort = mortality[:, 1]
     infantImpact = 1-(1/(np.exp(drInfant*PM25b)))
     infantExposure = population[:, 1]
@@ -328,16 +338,18 @@ def baselineRun():
 
     toc = time.perf_counter()
     print(f"Performed baseline run in {toc - tic:0.4f} seconds")
+    print(f'Total deaths across the United States in {year}: {deaths:.0f}')
+    print(f'Total deaths attributable to air pollution: {totalDeaths:.0f}')
+    print(f'Total monetary damages from air pollution: 
+    {totDmgReport:.0f}$billion')
 
 baselineRun()
 
 def mdLoops():
     return 421
+
 # print(PM25b)
 
-print( f'Total deaths across the United States in {year}: {deaths:.0f}')
-print( f'Total deaths attributable to air pollution: {totalDeaths:.0f}')
-print(f'Total monetary damages from air pollution: {totDmgReport:.0f} $billion')
 print(f'Numpy version used: {np.__version__}')
 #print( f'Among those: Infants: {infantDeaths}; Adults: {adultDeaths}')
 winsound.Beep(800, 200)
